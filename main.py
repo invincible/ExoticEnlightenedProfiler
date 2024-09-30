@@ -3,7 +3,7 @@ import difflib
 
 def compare_files(file1, file2):
     """
-    Сравнивает два файла и отображает разницу с учётом русского языка.
+    Сравнивает два файла и отображает разницу в виде HTML.
 
     Args:
         file1: Путь к первому файлу.
@@ -18,42 +18,34 @@ def compare_files(file1, file2):
             file1_content = f1.readlines()
             file2_content = f2.readlines()
 
-        diff = difflib.ndiff(file1_content, file2_content)
+        html_output = "<html>\n<head>\n<style>\n"
+        html_output += "del { background-color: #ffe0e0; text-decoration: line-through; }\n"
+        html_output += "add { background-color: #e0ffe0; }\n"
+        html_output += "</style>\n</head>\n<body>\n"
 
-        added_lines = 0
-        removed_lines = 0
+        html_output += "<h2>Различия в файлах:</h2>\n"
 
-        print("Различия в файлах:")
-        for line in diff:
-            if line.startswith('+'):
-                added_lines += 1
-                print(f"\033[92m{line[1:]}\033[0m", end="")  # Убираем '+'
-            elif line.startswith('-'):
-                removed_lines += 1
-                print(f"\033[91m{line[1:]}\033[0m", end="")  # Убираем '-'
-            else:
-                print(line, end="")
-
-        print("\nСводка:")
-        print(f"Добавленные строки: {added_lines}")
-        print(f"Удаленные строки: {removed_lines}")
-
-        print("\nСравнение по строкам:")
         for i, (line1, line2) in enumerate(zip(file1_content, file2_content)):
-            if line1 == line2:
-                print(f"  {line1.rstrip()}\t{line2.rstrip()}")
-            else:
-                for j, (char1, char2) in enumerate(zip(line1, line2)):
-                    if char1 == char2:
-                        print(char1, end="")
-                    elif char1 != char2:
-                        if i == added_lines - 1 and j == 0:
-                            print(f"\033[92m{char2}\033[0m", end="")
-                        else:
-                            print(f"\033[91m{char1}\033[0m", end="")
-                print(f"\t\033[92m{line2[j+1:]}\033[0m", end="")
-                print()
-                added_lines -= 1
+            matcher = difflib.SequenceMatcher(None, line1, line2)
+
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+                if tag == 'equal':
+                    html_output += line1[i1:i2]
+                elif tag == 'insert':
+                    html_output += f"<add>{line2[j1:j2]}</add>"
+                elif tag == 'delete':
+                    html_output += f"<del>{line1[i1:i2]}</del>"
+
+            if j2 < len(
+                    line2
+            ):  # Проверка на наличие символов в line2 после сравнения
+                html_output += f"<add>{line2[j2:]}</add>"
+
+            html_output += "<br>\n"  # Переход на новую строку
+
+        html_output += "</body>\n</html>"
+
+        print(html_output)
 
     except FileNotFoundError:
         print(f"Ошибка: Один или оба файла не найдены.")
